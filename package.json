@@ -6,8 +6,6 @@
   "scripts": {
     "develop": "next dev --hostname 0.0.0.0",
     "dev": "next dev --hostname 0.0.0.0",
-    "predev": "node scripts/write-index-page.js",
-    "prebuild": "node scripts/write-index-page.js",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
