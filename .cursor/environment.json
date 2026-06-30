@@ -4,6 +4,7 @@
     "context": ".."
   },
   "install": "npm ci",
+  "start": "sudo service docker start && docker compose up -d",
   "terminals": [
     {
       "name": "dev",
