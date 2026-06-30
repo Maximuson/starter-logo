@@ -4,10 +4,11 @@ import { prisma } from "../lib/prisma";
 /**
  * Home page component.
  *
- * `users` is not loaded with React hooks here. It is fetched on the server in
- * `getServerSideProps` below and passed in as a prop before the page renders.
+ * `users` is loaded on the server via `getStaticProps` below and passed in as a
+ * prop before the page renders. On GitHub Pages (static export) the list is
+ * empty and `usersUnavailableReason` explains why.
  */
-const Home = ({ users }) => {
+const Home = ({ users, usersUnavailableReason }) => {
   const [comets, setComets] = useState([{ degree: 0, size: 8 }]);
 
   function randomIntFromInterval(min, max) {
@@ -71,44 +72,78 @@ const Home = ({ users }) => {
       <section className="users">
         <h2 className="users__title">Users from database</h2>
         <p className="users__hint">Loaded via Prisma and DATABASE_URL</p>
-        <ul className="users__list">
-          {users.map((user) => (
-            <li key={user.id} className="users__item">
-              <span className="users__name">{user.name}</span>
-              <span className="users__email">{user.email}</span>
-            </li>
-          ))}
-        </ul>
+        {usersUnavailableReason ? (
+          <p className="users__unavailable">{usersUnavailableReason}</p>
+        ) : (
+          <ul className="users__list">
+            {users.map((user) => (
+              <li key={user.id} className="users__item">
+                <span className="users__name">{user.name}</span>
+                <span className="users__email">{user.email}</span>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
     </div>
   );
 };
 
 /**
- * Server-side data loader for the Pages Router.
+ * Static/SSR data loader for the Pages Router.
  *
- * This function runs on the server for every page request, before React renders.
- * That is a good place to talk to the database because:
- * - secrets like DATABASE_URL stay on the server
- * - the browser receives plain JSON props, not DB credentials
+ * Uses getStaticProps instead of getServerSideProps so GitHub Pages static
+ * export (output: "export") can build successfully.
  *
- * Equivalent idea in App Router: async Server Components or Route Handlers.
+ * - GitHub Pages: no database at runtime → show explanation message
+ * - Docker dev: DATABASE_URL set → fetch users (re-runs each request in dev)
+ * - CI build: no DATABASE_URL → empty list, build still passes
  */
-export async function getServerSideProps() {
-  const users = await prisma.user.findMany({
-    orderBy: { id: "asc" },
-    select: {
-      id: true,
-      name: true,
-      email: true,
-    },
-  });
+export async function getStaticProps() {
+  if (process.env.GITHUB_PAGES === "true") {
+    return {
+      props: {
+        users: [],
+        usersUnavailableReason:
+          "Database demo is not available on static GitHub Pages hosting. Run with Docker locally or in Cursor Cloud to see live data.",
+      },
+    };
+  }
 
-  return {
-    props: {
-      users,
-    },
-  };
+  if (!process.env.DATABASE_URL) {
+    return {
+      props: {
+        users: [],
+        usersUnavailableReason: null,
+      },
+    };
+  }
+
+  try {
+    const users = await prisma.user.findMany({
+      orderBy: { id: "asc" },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+      },
+    });
+
+    return {
+      props: {
+        users,
+        usersUnavailableReason: null,
+      },
+    };
+  } catch (error) {
+    console.error("Failed to load users:", error);
+    return {
+      props: {
+        users: [],
+        usersUnavailableReason: null,
+      },
+    };
+  }
 }
 
 export default Home;

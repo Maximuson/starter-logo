@@ -284,6 +284,13 @@
   color: #6c757d;
 }
 
+.users__unavailable {
+  margin: 0;
+  font-size: 0.875rem;
+  color: #6c757d;
+  line-height: 1.5;
+}
+
 .users__list {
   margin: 0;
   padding: 0;
