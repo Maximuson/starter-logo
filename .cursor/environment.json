@@ -1,9 +1,10 @@
 {
-  "install": "npm ci",
-  "terminals": [
+  "install": "bash .cursor/install.sh",
+  "start": "sudo service docker start && sudo docker compose up -d --build",
+  "ports": [
     {
-      "name": "dev",
-      "command": "npm run dev"
+      "name": "app",
+      "port": 3000
     }
   ]
 }

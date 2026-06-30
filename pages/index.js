@@ -1,5 +1,9 @@
 import { useState } from "react";
 
+/**
+ * Home page component.
+ * Click the "New App" heading to add animated comet dots.
+ */
 const Home = () => {
   const [comets, setComets] = useState([{ degree: 0, size: 8 }]);
 
