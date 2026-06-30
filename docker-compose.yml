@@ -1,7 +1,18 @@
-# Database for local dev and Cloud Agents.
-# Connection: postgresql://app:app@localhost:5432/app
-
 services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    environment:
+      DATABASE_URL: postgresql://app:app@db:5432/app
+      WATCHPACK_POLLING: "true"
+    depends_on:
+      db:
+        condition: service_healthy
+
   db:
     image: postgres:16-alpine
     ports:

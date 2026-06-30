@@ -3,12 +3,11 @@
     "dockerfile": "Dockerfile",
     "context": ".."
   },
-  "install": "npm ci",
-  "start": "sudo service docker start && docker compose up -d",
-  "terminals": [
+  "start": "sudo service docker start && docker compose up -d --build",
+  "ports": [
     {
-      "name": "dev",
-      "command": "npm run dev"
+      "name": "app",
+      "port": 3000
     }
   ]
 }
