@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { GithubStatic, GithubRemove } from "../lib/githubPageDecorators";
+import { pageDataStrategies } from "../lib/pageDataStrategies";
 
 function Home({ users = [], usersUnavailableReason = null }) {
   const [comets, setComets] = useState([{ degree: 0, size: 8 }]);
@@ -79,11 +81,20 @@ function Home({ users = [], usersUnavailableReason = null }) {
   );
 }
 
-// @github-pages-loader-start
+// --- Page data loaders (both defined here; only one export is active at a time) ---
+
+/** @GithubStatic — becomes getStaticProps on `npm run build:github-pages` */
+const loadGithubPage = GithubStatic(async () =>
+  pageDataStrategies.github.getProps(),
+);
+
+/** @GithubRemove — removed on GitHub Pages build */
+const loadServerPage = GithubRemove(async () =>
+  pageDataStrategies.server.getProps(),
+);
+
 export async function getServerSideProps() {
-  const { pageDataStrategies } = require("../lib/pageDataStrategies");
-  return pageDataStrategies.server.getProps();
+  return loadServerPage();
 }
-// @github-pages-loader-end
 
 export default Home;
