@@ -17,4 +17,4 @@ fi
 
 sudo apt-get update
 sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-  docker.io docker-compose-plugin
+  docker.io docker-compose-v2
