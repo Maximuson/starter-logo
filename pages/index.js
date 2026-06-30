@@ -1,6 +1,9 @@
 import { useState } from "react";
-import { GithubStatic, GithubRemove } from "../lib/githubPageDecorators";
-import { pageDataStrategies } from "../lib/pageDataStrategies";
+import { GithubOnly } from "../lib/githubPageDecorators";
+import { prisma } from "../lib/prisma";
+
+const GITHUB_PAGES_MESSAGE =
+  "Database demo is not available on static GitHub Pages hosting. Run with Docker locally or in Cursor Cloud to see live data.";
 
 function Home({ users = [], usersUnavailableReason = null }) {
   const [comets, setComets] = useState([{ degree: 0, size: 8 }]);
@@ -81,20 +84,40 @@ function Home({ users = [], usersUnavailableReason = null }) {
   );
 }
 
-// --- Page data loaders (both defined here; only one export is active at a time) ---
-
-/** @GithubStatic — becomes getStaticProps on `npm run build:github-pages` */
-const loadGithubPage = GithubStatic(async () =>
-  pageDataStrategies.github.getProps(),
-);
-
-/** @GithubRemove — removed on GitHub Pages build */
-const loadServerPage = GithubRemove(async () =>
-  pageDataStrategies.server.getProps(),
-);
+GithubOnly
+async function loadGithubPage() {
+  return {
+    props: {
+      users: [],
+      usersUnavailableReason: GITHUB_PAGES_MESSAGE,
+    },
+  };
+}
 
 export async function getServerSideProps() {
-  return loadServerPage();
+  let users = [];
+
+  if (process.env.DATABASE_URL) {
+    try {
+      users = await prisma.user.findMany({
+        orderBy: { id: "asc" },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      });
+    } catch (error) {
+      console.error("Failed to load users:", error);
+    }
+  }
+
+  return {
+    props: {
+      users,
+      usersUnavailableReason: null,
+    },
+  };
 }
 
 export default Home;
