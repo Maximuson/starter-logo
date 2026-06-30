@@ -1,5 +1,4 @@
-import "bootstrap/dist/css/bootstrap.min.css";
-import "../assets/style/main.scss";
+import "../assets/style/main.css";
 
 export default function MyApp({ Component, pageProps }) {
   return <Component {...pageProps} />;
