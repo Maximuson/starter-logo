@@ -12,7 +12,11 @@
     "lint:fix": "next lint --fix",
     "up": "test -f .env || cp .env.example .env; docker compose up -d",
     "down": "docker compose down",
-    "logs": "docker compose logs -f"
+    "logs": "docker compose logs -f",
+    "db:migrate": "prisma migrate deploy",
+    "db:seed": "prisma db seed",
+    "db:setup": "prisma migrate deploy && prisma db seed",
+    "postinstall": "prisma generate"
   },
   "repository": {
     "type": "git",
@@ -22,6 +26,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@prisma/client": "^6.19.3",
     "@tailwindcss/postcss": "^4.3.2",
     "next": "^16.2.9",
     "postcss": "^8.5.16",
@@ -32,5 +37,11 @@
   "bugs": {
     "url": "https://github.com/Maximuson/starter-logo/issues"
   },
-  "homepage": "https://github.com/Maximuson/starter-logo#readme"
+  "homepage": "https://github.com/Maximuson/starter-logo#readme",
+  "devDependencies": {
+    "prisma": "^6.19.3"
+  },
+  "prisma": {
+    "seed": "node prisma/seed.js"
+  }
 }

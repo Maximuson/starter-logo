@@ -1,6 +1,7 @@
 import { useState } from "react";
+import { prisma } from "../lib/prisma";
 
-const Home = () => {
+const Home = ({ users }) => {
   const [comets, setComets] = useState([{ degree: 0, size: 8 }]);
 
   function randomIntFromInterval(min, max) {
@@ -59,8 +60,38 @@ const Home = () => {
         ))}
         <div className="comet-8"></div>
       </h1>
+
+      <section className="users">
+        <h2 className="users__title">Users from database</h2>
+        <p className="users__hint">Loaded via Prisma and DATABASE_URL</p>
+        <ul className="users__list">
+          {users.map((user) => (
+            <li key={user.id} className="users__item">
+              <span className="users__name">{user.name}</span>
+              <span className="users__email">{user.email}</span>
+            </li>
+          ))}
+        </ul>
+      </section>
     </div>
   );
 };
+
+export async function getServerSideProps() {
+  const users = await prisma.user.findMany({
+    orderBy: { id: "asc" },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+    },
+  });
+
+  return {
+    props: {
+      users,
+    },
+  };
+}
 
 export default Home;
