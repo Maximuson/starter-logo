@@ -1,0 +1,6 @@
+# Ignore build output and dependencies when building the app image.
+node_modules
+.next
+out
+.git
+.env*

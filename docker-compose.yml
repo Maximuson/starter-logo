@@ -1,0 +1,22 @@
+# Docker Compose stack for local development and Cursor Cloud Agents.
+#
+# Services:
+# - app: Next.js dev server
+#
+# Start:
+#   npm run up
+
+services:
+  app:
+    build: .
+    ports:
+      # hostPort:containerPort
+      - "${APP_PORT:-3000}:3000"
+    volumes:
+      # Mount source code for hot reload during development
+      - .:/app
+      # Keep container node_modules separate from host node_modules
+      - /app/node_modules
+    environment:
+      # Helps file watching work reliably in Docker on some systems
+      WATCHPACK_POLLING: ${WATCHPACK_POLLING:-true}

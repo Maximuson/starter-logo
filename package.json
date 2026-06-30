@@ -4,12 +4,15 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "develop": "next dev",
-    "dev": "next dev",
+    "develop": "next dev --hostname 0.0.0.0",
+    "dev": "next dev --hostname 0.0.0.0",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "lint:fix": "next lint --fix"
+    "lint:fix": "next lint --fix",
+    "up": "test -f .env || cp .env.example .env; docker compose up -d",
+    "down": "docker compose down",
+    "logs": "docker compose logs -f"
   },
   "repository": {
     "type": "git",
