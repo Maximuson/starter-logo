@@ -42,13 +42,13 @@ const Home = () => {
         <span className="bg-text bg-text-1"> New App</span>
         {comets.map((item, index) => (
           <div
+            key={index}
             className="comet__line"
             style={{
               transform: `rotateZ(${item.degree}deg)`,
             }}
           >
             <div
-              key={index}
               style={{
                 width: `${item.size}px`,
                 height: `${item.size}px`,
