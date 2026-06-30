@@ -1,53 +1,4 @@
 import { useState } from "react";
-import { prisma } from "../lib/prisma";
-
-const IS_GITHUB_PAGES = process.env.GITHUB_PAGES === "true";
-
-const GITHUB_PAGES_MESSAGE =
-  "Database demo is not available on static GitHub Pages hosting. Run with Docker locally or in Cursor Cloud to see live data.";
-
-/**
- * Strategy pattern — pick how page data is loaded.
- *
- * | Strategy | When                         | Behavior                          |
- * |----------|------------------------------|-----------------------------------|
- * | github   | GITHUB_PAGES=true            | Static message, no database       |
- * | server   | Docker, Cursor, local dev    | Load users from Postgres via Prisma |
- */
-const pageDataStrategies = {
-  github: async () => ({
-    props: {
-      users: [],
-      usersUnavailableReason: GITHUB_PAGES_MESSAGE,
-    },
-  }),
-
-  server: async () => {
-    let users = [];
-
-    if (process.env.DATABASE_URL) {
-      try {
-        users = await prisma.user.findMany({
-          orderBy: { id: "asc" },
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        });
-      } catch (error) {
-        console.error("Failed to load users:", error);
-      }
-    }
-
-    return {
-      props: {
-        users,
-        usersUnavailableReason: null,
-      },
-    };
-  },
-};
 
 function Home({ users = [], usersUnavailableReason = null }) {
   const [comets, setComets] = useState([{ degree: 0, size: 8 }]);
@@ -128,17 +79,11 @@ function Home({ users = [], usersUnavailableReason = null }) {
   );
 }
 
-/**
- * GitHub Pages only supports static export, so we must use getStaticProps.
- * Next.js does not allow getStaticProps and getServerSideProps on the same page.
- *
- * The active strategy is chosen here:
- * - github → static hosting
- * - server → live database (re-runs on each request in `next dev`)
- */
-export async function getStaticProps() {
-  const strategyName = IS_GITHUB_PAGES ? "github" : "server";
-  return pageDataStrategies[strategyName]();
+// @github-pages-loader-start
+export async function getServerSideProps() {
+  const { pageDataStrategies } = require("../lib/pageDataStrategies");
+  return pageDataStrategies.server.getProps();
 }
+// @github-pages-loader-end
 
 export default Home;
