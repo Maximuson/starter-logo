@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+if [ ! -f .env ] && [ -f .env.example ]; then
+  cp .env.example .env
+fi
+
 if command -v docker >/dev/null 2>&1; then
   exit 0
 fi

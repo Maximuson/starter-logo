@@ -10,7 +10,7 @@
     "start": "next start",
     "lint": "next lint",
     "lint:fix": "next lint --fix",
-    "up": "docker compose up -d",
+    "up": "test -f .env || cp .env.example .env; docker compose up -d",
     "down": "docker compose down",
     "logs": "docker compose logs -f"
   },
