@@ -1,15 +1,26 @@
+// Prisma schema = blueprint of your database tables.
+// Think of it like TypeScript interfaces, but Prisma also generates SQL migrations
+// and a typed JavaScript client from this file.
+//
+// Docs: https://www.prisma.io/docs/orm/prisma-schema
+
+// Tells Prisma to generate a JavaScript/TypeScript client in node_modules.
 generator client {
   provider = "prisma-client-js"
 }
 
+// Database connection settings.
+// `DATABASE_URL` comes from .env or Docker Compose environment variables.
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
+// One model = one database table.
+// `User` model becomes a `"User"` table in Postgres.
 model User {
-  id        Int      @id @default(autoincrement())
-  email     String   @unique
+  id        Int      @id @default(autoincrement()) // primary key, auto-increment
+  email     String   @unique                      // must be unique across rows
   name      String
-  createdAt DateTime @default(now())
+  createdAt DateTime @default(now())              // set automatically on insert
 }

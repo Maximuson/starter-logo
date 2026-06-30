@@ -1,6 +1,12 @@
 import { useState } from "react";
 import { prisma } from "../lib/prisma";
 
+/**
+ * Home page component.
+ *
+ * `users` is not loaded with React hooks here. It is fetched on the server in
+ * `getServerSideProps` below and passed in as a prop before the page renders.
+ */
 const Home = ({ users }) => {
   const [comets, setComets] = useState([{ degree: 0, size: 8 }]);
 
@@ -61,6 +67,7 @@ const Home = ({ users }) => {
         <div className="comet-8"></div>
       </h1>
 
+      {/* Simple backend demo: users loaded from Postgres through Prisma */}
       <section className="users">
         <h2 className="users__title">Users from database</h2>
         <p className="users__hint">Loaded via Prisma and DATABASE_URL</p>
@@ -77,6 +84,16 @@ const Home = ({ users }) => {
   );
 };
 
+/**
+ * Server-side data loader for the Pages Router.
+ *
+ * This function runs on the server for every page request, before React renders.
+ * That is a good place to talk to the database because:
+ * - secrets like DATABASE_URL stay on the server
+ * - the browser receives plain JSON props, not DB credentials
+ *
+ * Equivalent idea in App Router: async Server Components or Route Handlers.
+ */
 export async function getServerSideProps() {
   const users = await prisma.user.findMany({
     orderBy: { id: "asc" },

@@ -1,27 +1,49 @@
+# Docker Compose stack for local development and Cursor Cloud Agents.
+#
+# Services:
+# - app: Next.js + Prisma
+# - db:  Postgres database
+#
+# Start:
+#   npm run up
+#
+# Compose automatically reads variables from `.env` in the project root.
+
 services:
+  # Next.js application
   app:
     build: .
     ports:
+      # hostPort:containerPort
       - "${APP_PORT:-3000}:3000"
     volumes:
+      # Mount source code for hot reload during development
       - .:/app
+      # Keep container node_modules separate from host node_modules
       - /app/node_modules
     environment:
+      # Connection string used by Prisma inside the app container.
+      # `db` is the Postgres service name on the internal Docker network.
       DATABASE_URL: ${DATABASE_URL:-postgresql://app:app@db:5432/app}
+      # Helps file watching work reliably in Docker on some systems
       WATCHPACK_POLLING: ${WATCHPACK_POLLING:-true}
     depends_on:
       db:
+        # Wait until Postgres is ready before starting the app
         condition: service_healthy
 
+  # PostgreSQL database
   db:
     image: postgres:16-alpine
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     environment:
+      # These variables configure the Postgres container itself
       POSTGRES_USER: ${POSTGRES_USER:-app}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-app}
       POSTGRES_DB: ${POSTGRES_DB:-app}
     volumes:
+      # Persist database files between container restarts on the same machine
       - db_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-app} -d ${POSTGRES_DB:-app}"]

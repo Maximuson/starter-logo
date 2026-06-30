@@ -1,3 +1,13 @@
+-- Initial migration: create the "User" table.
+--
+-- Migrations are versioned SQL files that change the database schema over time.
+-- Commit them to git so every developer and every environment gets the same tables.
+--
+-- Apply migrations:
+--   npm run db:migrate
+--
+-- This file was generated from prisma/schema.prisma.
+
 -- CreateTable
 CREATE TABLE "User" (
     "id" SERIAL NOT NULL,
