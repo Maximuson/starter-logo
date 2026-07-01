@@ -93,10 +93,6 @@ async function getGithubStaticPageProps() {
   };
 }
 
-// Pattern B (optional): add // GithubOnly above export async function getStaticProps.
-// GitHub build removes getServerSideProps and keeps your getStaticProps (no duplicate).
-// Pattern B breaks next dev (two exports) — use Pattern A (loader only) for daily dev.
-
 export async function getServerSideProps() {
   let users = [];
 
