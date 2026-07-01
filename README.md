@@ -565,18 +565,27 @@ Delete:
 
 **Vercel** is the production host for this app. It runs the normal SSR build (`getServerSideProps` + Prisma), not the GitHub Pages static export.
 
+**Docker Compose is for local development only.** Vercel does not run `docker-compose.yml`. Production uses Node 24 directly with a remote `DATABASE_URL` (Neon, Vercel Postgres, etc.), not the Compose `db` service hostname.
+
 ### What runs on Vercel
 
 | File | Role |
 |------|------|
-| `vercel.json` | Production build command (migrate + SSR `next build`) |
-| `.github/workflows/vercel.yml` | Deploy to Vercel on push to `main` |
+| `vercel.json` | Node install/build commands; disables Git auto-deploy on `main` (GitHub Actions deploys instead) |
+| `package.json` | `engines.node` = `24.x` (overrides legacy Vercel project Node version); `build:vercel` script |
+| `.github/workflows/vercel.yml` | Deploy to Vercel on push to `main` via `vercel deploy --prebuilt` |
 | `prisma/schema.prisma` | `binaryTargets` includes `rhel-openssl-3.0.x` for Vercel's Linux runtime |
 
-Build flow on Vercel:
+Build flow on Vercel (via GitHub Actions):
 
 ```
-npm ci → prisma migrate deploy → strip GithubOnly → next build → deploy
+npm ci → vercel pull → vercel build (npm run build:vercel) → vercel deploy --prebuilt
+```
+
+Where `build:vercel` runs:
+
+```
+prisma migrate deploy → strip GithubOnly → next build → restore GithubOnly
 ```
 
 ### One-time setup
@@ -611,16 +620,18 @@ npm ci → prisma migrate deploy → strip GithubOnly → next build → deploy
 
 You can skip the GitHub Actions workflow and use Vercel's built-in Git integration (auto-deploy on push). The workflow in `.github/workflows/vercel.yml` gives you deploy logs in GitHub Actions and uses `vercel deploy --prebuilt`.
 
-If you use **only** Vercel's integration, disable or delete `.github/workflows/vercel.yml` to avoid duplicate deploys.
+If you use **only** Vercel's integration, remove `"git": { "deploymentEnabled": { "main": false } }` from `vercel.json` and disable or delete `.github/workflows/vercel.yml` to avoid duplicate deploys.
 
 ### Local production build (same as Vercel, without deploy)
 
+With Docker Compose running (`npm run up`) and `DATABASE_URL` pointing at the `db` service:
+
 ```bash
-npm run build
+npm run build:vercel
 npm run start
 ```
 
-Requires a running database and `DATABASE_URL` in `.env`.
+Without Docker, point `DATABASE_URL` at any reachable Postgres and run the same commands.
 
 ---
 
@@ -689,7 +700,8 @@ The Node 20 deprecation message in the log is only a warning — this workflow a
 
 - Check **Actions → Vercel Production** for build errors
 - Confirm `VERCEL_TOKEN`, `VERCEL_ORG_ID`, and `VERCEL_PROJECT_ID` are set in GitHub Secrets
-- Confirm `DATABASE_URL` is set in Vercel **Production** environment variables
+- Confirm `DATABASE_URL` is set in Vercel **Production** environment variables (remote Postgres — not the Docker Compose `db` hostname)
+- Confirm Node.js **24.x** is used (`package.json` `engines.node` overrides old project settings)
 - Run seed once against production: `DATABASE_URL="..." npm run db:seed`
 - Prisma on Vercel needs `binaryTargets = ["native", "rhel-openssl-3.0.x"]` in `prisma/schema.prisma` (already configured)
 

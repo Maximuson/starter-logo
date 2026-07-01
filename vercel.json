@@ -2,5 +2,10 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "nextjs",
   "installCommand": "npm ci",
-  "buildCommand": "prisma migrate deploy && node scripts/strip-github-only.js && next build && node scripts/restore-github-only.js"
+  "buildCommand": "npm run build:vercel",
+  "git": {
+    "deploymentEnabled": {
+      "main": false
+    }
+  }
 }

@@ -3,10 +3,14 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
+  "engines": {
+    "node": "24.x"
+  },
   "scripts": {
     "develop": "next dev --hostname 0.0.0.0",
     "dev": "next dev --hostname 0.0.0.0",
     "build": "node scripts/strip-github-only.js && next build && node scripts/restore-github-only.js",
+    "build:vercel": "prisma migrate deploy && npm run build",
     "build:github-pages": "node scripts/github-pages/prepare-build.js && GITHUB_PAGES=true next build",
     "start": "next start",
     "lint": "next lint",
