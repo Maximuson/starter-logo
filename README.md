@@ -1,5 +1,7 @@
 # starter-logo
 
+**GitHub Pages:** [https://maximuson.github.io/starter-logo/](https://maximuson.github.io/starter-logo/)
+
 A minimal **Next.js** front-end app with a small **full-stack example**: Postgres database, **Prisma** ORM, **Docker Compose**, and **Cursor Cloud Agent** support.
 
 > **Note:** This PR builds on [PR #10](https://github.com/Maximuson/starter-logo/pull/10) (Docker frontend setup). Merge that PR first, or review this branch as the full stack on top of it.
