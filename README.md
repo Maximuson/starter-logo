@@ -702,6 +702,7 @@ The Node 20 deprecation message in the log is only a warning — this workflow a
 - Confirm `VERCEL_TOKEN`, `VERCEL_ORG_ID`, and `VERCEL_PROJECT_ID` are set in GitHub Secrets
 - Confirm `DATABASE_URL` is set in Vercel **Production** environment variables (remote Postgres — not the Docker Compose `db` hostname)
 - Confirm Node.js **24.x** is used (`package.json` `engines.node` overrides old project settings)
+- If build fails with `Found invalid Node.js Version: "24.x"`, upgrade the workflow's Vercel CLI (use `vercel@50` or newer — CLI 41 only supports Node 22)
 - Run seed once against production: `DATABASE_URL="..." npm run db:seed`
 - Prisma on Vercel needs `binaryTargets = ["native", "rhel-openssl-3.0.x"]` in `prisma/schema.prisma` (already configured)
 
