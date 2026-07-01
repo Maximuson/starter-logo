@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { GithubOnly } from "../lib/githubPageDecorators";
 import { prisma } from "../lib/prisma";
 
 const GITHUB_PAGES_MESSAGE =
@@ -84,7 +83,7 @@ function Home({ users = [], usersUnavailableReason = null }) {
   );
 }
 
-GithubOnly
+// GithubOnly — removed on npm run build; used by getStaticProps on build:github-pages
 async function loadGithubPage() {
   return {
     props: {
@@ -93,6 +92,10 @@ async function loadGithubPage() {
     },
   };
 }
+
+// Pattern B (optional): add // GithubOnly above export async function getStaticProps.
+// GitHub build removes getServerSideProps and keeps your getStaticProps (no duplicate).
+// Pattern B breaks next dev (two exports) — use Pattern A (loader only) for daily dev.
 
 export async function getServerSideProps() {
   let users = [];

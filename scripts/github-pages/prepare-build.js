@@ -1,25 +1,43 @@
 #!/usr/bin/env node
 /**
- * GitHub Pages build: swap getServerSideProps → getStaticProps (GithubOnly loader).
+ * GitHub Pages build:
+ * 1. Remove getServerSideProps
+ * 2. Keep existing getStaticProps if present (no duplicate)
+ * 3. Otherwise create getStaticProps from // GithubOnly loader function
  */
 const fs = require("fs");
 const path = require("path");
 
 const pagePath = path.join(__dirname, "../../pages/index.js");
-const source = fs.readFileSync(pagePath, "utf8");
+let source = fs.readFileSync(pagePath, "utf8");
 
-const fnMatch = source.match(/GithubOnly\nasync function (\w+)\(\)/);
+const hasGetStaticProps = /^export async function getStaticProps/m.test(source);
 
-if (!fnMatch) {
-  throw new Error("pages/index.js: missing GithubOnly async function");
-}
-
-const githubLoaderName = fnMatch[1];
-
-const updated = source.replace(
-  /export async function getServerSideProps\(\) \{[\s\S]*?\n\}/,
-  `export async function getStaticProps() {\n  return ${githubLoaderName}();\n}`,
+source = source.replace(
+  /export async function getServerSideProps\(\) \{[\s\S]*?\n\}\n\n?/,
+  "",
 );
 
-fs.writeFileSync(pagePath, updated);
-console.log(`GitHub Pages build: getStaticProps → ${githubLoaderName}()`);
+if (!hasGetStaticProps) {
+  const loaderMatch = source.match(
+    /\/\/ GithubOnly[^\n]*\nasync function (\w+)\(/,
+  );
+
+  if (!loaderMatch) {
+    throw new Error(
+      "pages/index.js: need // GithubOnly loader or export async function getStaticProps",
+    );
+  }
+
+  const loaderName = loaderMatch[1];
+  source = source.replace(
+    /export default Home;/,
+    `export async function getStaticProps() {\n  return ${loaderName}();\n}\n\nexport default Home;`,
+  );
+
+  console.log(`GitHub Pages build: added getStaticProps → ${loaderName}()`);
+} else {
+  console.log("GitHub Pages build: kept existing getStaticProps");
+}
+
+fs.writeFileSync(pagePath, source);
