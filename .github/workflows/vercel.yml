@@ -3,8 +3,13 @@
 # Local dev uses Docker Compose (app + Postgres). Vercel runs Next.js SSR
 # directly on Node 24 with a remote DATABASE_URL — no Docker on Vercel.
 #
-# Requires GitHub secrets: VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID
-# Requires Vercel env: DATABASE_URL (Production) pointing to hosted Postgres
+# `vercel build` runs on the GitHub Actions runner (not on Vercel), so
+# DATABASE_URL must be passed explicitly for prisma migrate deploy during build.
+#
+# Required GitHub secrets:
+#   VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID, DATABASE_URL
+#
+# Also set DATABASE_URL in Vercel Production env vars for runtime SSR.
 
 name: Vercel Production
 
@@ -20,6 +25,7 @@ concurrency:
 env:
   VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
   VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+  DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
 jobs:
   deploy:
@@ -34,6 +40,14 @@ jobs:
         with:
           node-version: 24
           cache: npm
+
+      - name: Verify DATABASE_URL secret
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::error::DATABASE_URL is missing. Add it as a repository secret (Settings → Secrets and variables → Actions). Use your Vercel Postgres connection string — not the Docker Compose db hostname."
+            exit 1
+          fi
+          echo "DATABASE_URL is configured"
 
       - name: Install dependencies
         run: npm ci

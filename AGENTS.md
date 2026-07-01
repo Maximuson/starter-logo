@@ -118,7 +118,7 @@ sudo systemctl restart docker || sudo dockerd &
 | Demo/seed data | `prisma/seed.js` |
 | DB access in pages | `lib/prisma.js`, `getServerSideProps` in `pages/` |
 | GitHub Pages static export | `// GithubOnly` helper + `scripts/github-pages/prepare-build.js` |
-| Vercel production deploy | `vercel.json`, `package.json` (`engines`, `build:vercel`), `.github/workflows/vercel.yml`, `DATABASE_URL` in Vercel |
+| Vercel production deploy | `vercel.json`, `package.json` (`engines`, `build:vercel`), `.github/workflows/vercel.yml`, `DATABASE_URL` in Vercel + GitHub repository secrets |
 | Compose services / ports | `docker-compose.yml`, `.env.example` |
 | Cloud boot config | `.cursor/environment.json`, `.cursor/install.sh` |
 
