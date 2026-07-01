@@ -61,10 +61,38 @@ npm run db:setup
 npm run down && npm run up
 ```
 
-### Lint and tests
+### Lint, tests, and builds
 
 - `npm run lint` is broken: the script runs `next lint`, which was removed in Next.js 16, so it errors with `Invalid project directory provided, no such directory: /workspace/lint`. Lint is not wired up; invoke ESLint directly if needed.
 - No automated tests exist in this repo.
+- **`npm run build`** — SSR production build (`getServerSideProps`, live DB). Strips `// GithubOnly` blocks before build and restores after.
+- **`npm run build:github-pages`** — static export for GitHub Pages (`getStaticProps`, no DB). Used by CI on push to `main`.
+
+### GitHub Pages data loading (`// GithubOnly`)
+
+Next.js allows **one data export per page**: `getServerSideProps` **or** `getStaticProps`, not both.
+
+This repo uses **Pattern A** in `pages/index.js`:
+
+```js
+// GithubOnly
+async function getGithubStaticPageProps() { ... }  // helper, not exported
+
+export async function getServerSideProps() { ... } // only active export in dev
+```
+
+| Command | Active export | `getGithubStaticPageProps` |
+|---------|---------------|----------------------------|
+| `next dev` / Docker | `getServerSideProps` | Present but unused |
+| `npm run build` | `getServerSideProps` | Stripped by `scripts/strip-github-only.js` |
+| `npm run build:github-pages` | `getStaticProps` (auto-added) | Used by `getStaticProps` |
+
+Scripts:
+
+- `scripts/strip-github-only.js` + `scripts/restore-github-only.js` — normal build
+- `scripts/github-pages/prepare-build.js` — removes `getServerSideProps`, adds `getStaticProps` from the `// GithubOnly` helper
+
+Do **not** export `getStaticProps` in page files for daily dev. Full explanation: [README.md — GitHub Pages vs server-side rendering](README.md#github-pages-vs-server-side-rendering).
 
 ### Docker notes for Cloud Agents
 
@@ -86,6 +114,7 @@ sudo systemctl restart docker || sudo dockerd &
 | Add/edit database models | `prisma/schema.prisma` + new migration |
 | Demo/seed data | `prisma/seed.js` |
 | DB access in pages | `lib/prisma.js`, `getServerSideProps` in `pages/` |
+| GitHub Pages static export | `// GithubOnly` helper + `scripts/github-pages/prepare-build.js` |
 | Compose services / ports | `docker-compose.yml`, `.env.example` |
 | Cloud boot config | `.cursor/environment.json`, `.cursor/install.sh` |
 

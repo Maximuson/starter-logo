@@ -1,17 +1,13 @@
 import { useState } from "react";
 import { prisma } from "../lib/prisma";
 
-/**
- * Home page component.
- *
- * `users` is not loaded with React hooks here. It is fetched on the server in
- * `getServerSideProps` below and passed in as a prop before the page renders.
- */
-const Home = ({ users }) => {
+const GITHUB_PAGES_MESSAGE =
+  "Database demo is not available on static GitHub Pages hosting. Run with Docker locally or in Cursor Cloud to see live data.";
+
+function Home({ users = [], usersUnavailableReason = null }) {
   const [comets, setComets] = useState([{ degree: 0, size: 8 }]);
 
   function randomIntFromInterval(min, max) {
-    // min and max included
     return Math.floor(Math.random() * (max - min + 1) + min);
   }
 
@@ -67,46 +63,62 @@ const Home = ({ users }) => {
         <div className="comet-8"></div>
       </h1>
 
-      {/* Simple backend demo: users loaded from Postgres through Prisma */}
       <section className="users">
         <h2 className="users__title">Users from database</h2>
         <p className="users__hint">Loaded via Prisma and DATABASE_URL</p>
-        <ul className="users__list">
-          {users.map((user) => (
-            <li key={user.id} className="users__item">
-              <span className="users__name">{user.name}</span>
-              <span className="users__email">{user.email}</span>
-            </li>
-          ))}
-        </ul>
+        {usersUnavailableReason ? (
+          <p className="users__unavailable">{usersUnavailableReason}</p>
+        ) : (
+          <ul className="users__list">
+            {users.map((user) => (
+              <li key={user.id} className="users__item">
+                <span className="users__name">{user.name}</span>
+                <span className="users__email">{user.email}</span>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
     </div>
   );
-};
+}
 
-/**
- * Server-side data loader for the Pages Router.
- *
- * This function runs on the server for every page request, before React renders.
- * That is a good place to talk to the database because:
- * - secrets like DATABASE_URL stay on the server
- * - the browser receives plain JSON props, not DB credentials
- *
- * Equivalent idea in App Router: async Server Components or Route Handlers.
- */
-export async function getServerSideProps() {
-  const users = await prisma.user.findMany({
-    orderBy: { id: "asc" },
-    select: {
-      id: true,
-      name: true,
-      email: true,
+// GithubOnly — removed on npm run build; used by getStaticProps on build:github-pages
+async function getGithubStaticPageProps() {
+  return {
+    props: {
+      users: [],
+      usersUnavailableReason: GITHUB_PAGES_MESSAGE,
     },
-  });
+  };
+}
+
+// Pattern B (optional): add // GithubOnly above export async function getStaticProps.
+// GitHub build removes getServerSideProps and keeps your getStaticProps (no duplicate).
+// Pattern B breaks next dev (two exports) — use Pattern A (loader only) for daily dev.
+
+export async function getServerSideProps() {
+  let users = [];
+
+  if (process.env.DATABASE_URL) {
+    try {
+      users = await prisma.user.findMany({
+        orderBy: { id: "asc" },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      });
+    } catch (error) {
+      console.error("Failed to load users:", error);
+    }
+  }
 
   return {
     props: {
       users,
+      usersUnavailableReason: null,
     },
   };
 }

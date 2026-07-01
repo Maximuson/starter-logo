@@ -24,9 +24,10 @@ This README is written for **frontend developers** who are new to backend concep
 10. [Prisma workflow: schema, migrations, seed](#prisma-workflow-schema-migrations-seed)
 11. [Docker and Docker Compose](#docker-and-docker-compose)
 12. [Cursor Cloud Agents](#cursor-cloud-agents)
-13. [Using a remote database instead](#using-a-remote-database-instead)
-14. [Common tasks](#common-tasks)
-15. [Troubleshooting](#troubleshooting)
+13. [GitHub Pages vs server-side rendering](#github-pages-vs-server-side-rendering)
+14. [Using a remote database instead](#using-a-remote-database-instead)
+15. [Common tasks](#common-tasks)
+16. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -134,6 +135,11 @@ starter-logo/
 ├── pages/
 │   ├── index.js          # Home page + getServerSideProps (loads users)
 │   └── _app.js           # App wrapper, imports global CSS
+├── scripts/
+│   ├── strip-github-only.js       # Removes // GithubOnly blocks before normal build
+│   ├── restore-github-only.js     # Restores pages/index.js after normal build
+│   └── github-pages/
+│       └── prepare-build.js       # Swaps SSR → static export for GitHub Pages
 ├── lib/
 │   └── prisma.js         # Shared Prisma client (DB connection)
 ├── prisma/
@@ -301,7 +307,8 @@ npm run logs
 | `npm run down` | Stop all containers |
 | `npm run logs` | Follow container logs |
 | `npm run dev` | Start Next.js dev server (used inside container) |
-| `npm run build` | Production build |
+| `npm run build` | Production build (SSR, live database) |
+| `npm run build:github-pages` | Static export for GitHub Pages (no database) |
 | `npm run db:migrate` | Apply migrations to the database |
 | `npm run db:seed` | Insert demo users |
 | `npm run db:setup` | Migrate + seed |
@@ -329,7 +336,12 @@ One shared database connection for the app.
 ### 5. Page (`pages/index.js`)
 
 ```js
-// Server-side: runs before HTML is sent to browser
+// GithubOnly — static fallback for GitHub Pages (not used in dev)
+async function getGithubStaticPageProps() {
+  return { props: { users: [], usersUnavailableReason: "..." } };
+}
+
+// Server-side: runs before HTML is sent to browser (dev + Docker + normal build)
 export async function getServerSideProps() {
   const users = await prisma.user.findMany();
   return { props: { users } };
@@ -338,6 +350,8 @@ export async function getServerSideProps() {
 // Client/server: renders the UI
 const Home = ({ users }) => { ... };
 ```
+
+See [GitHub Pages vs server-side rendering](#github-pages-vs-server-side-rendering) for why both patterns live in one file.
 
 ---
 
@@ -433,6 +447,114 @@ Cursor can run this repo in a remote cloud VM.
 The local Postgres container is great for development, but **data inside the cloud VM is usually temporary** between agent sessions.
 
 For data that must survive longer, use a **remote database** (Neon, Supabase, etc.) and set `DATABASE_URL` in [Cursor Secrets](https://cursor.com/dashboard/cloud-agents).
+
+---
+
+## GitHub Pages vs server-side rendering
+
+This app is deployed in two ways:
+
+| Target | Command | Data loading | Database |
+|--------|---------|--------------|----------|
+| **Dev / Docker / production** | `npm run dev`, `npm run build` | `getServerSideProps` (SSR) | Yes — live Prisma queries |
+| **GitHub Pages** | `npm run build:github-pages` | `getStaticProps` (static export) | No — static fallback message |
+
+GitHub Pages only serves static files. It cannot run a Node server or connect to Postgres. So we use **SSR by default** and switch to **static export only for GitHub Pages**.
+
+### One page, one active loader
+
+Next.js allows **only one** data export per page file at a time:
+
+- `getServerSideProps` **or** `getStaticProps`
+- **not both together**
+
+Our source file contains code for both paths, but **only one export is active** when Next.js runs:
+
+```
+next dev                 → getServerSideProps only
+npm run build            → getServerSideProps only
+npm run build:github-pages → getStaticProps only
+```
+
+### Pattern A (used in this repo)
+
+Per page, keep:
+
+1. **One `// GithubOnly` helper** — not exported, only for GitHub Pages
+2. **One exported loader** — `getServerSideProps` for dev and normal builds
+
+```js
+// GithubOnly — removed on npm run build; used by getStaticProps on build:github-pages
+async function getGithubStaticPageProps() {
+  return {
+    props: {
+      users: [],
+      usersUnavailableReason: "Database demo is not available on static GitHub Pages hosting.",
+    },
+  };
+}
+
+export async function getServerSideProps() {
+  const users = await prisma.user.findMany();
+  return { props: { users, usersUnavailableReason: null } };
+}
+```
+
+| Piece | Role |
+|-------|------|
+| `getGithubStaticPageProps` + `// GithubOnly` | Helper only — present in source, unused in dev |
+| `getServerSideProps` | The one active export for dev and `npm run build` |
+| `getStaticProps` | **Not in source** — added automatically for GitHub Pages build |
+
+Do **not** export `getStaticProps` in the repo for daily dev. The GitHub build creates it for you.
+
+### What each command does
+
+```mermaid
+flowchart LR
+  subgraph dev [next dev / Docker]
+    SSR[getServerSideProps]
+    DB[(Postgres)]
+    SSR --> DB
+  end
+
+  subgraph normalBuild [npm run build]
+    Strip[strip-github-only.js]
+    SSR2[getServerSideProps]
+    Strip --> SSR2
+    SSR2 --> DB2[(Postgres)]
+  end
+
+  subgraph ghBuild [npm run build:github-pages]
+    Prep[prepare-build.js]
+    GSP[getStaticProps]
+    Helper[getGithubStaticPageProps]
+    Prep --> GSP
+    GSP --> Helper
+  end
+```
+
+| Step | Script | Effect |
+|------|--------|--------|
+| `npm run build` | `scripts/strip-github-only.js` | Removes `// GithubOnly` blocks, then restores after build |
+| `npm run build:github-pages` | `scripts/github-pages/prepare-build.js` | Removes `getServerSideProps`, adds `getStaticProps` calling `getGithubStaticPageProps()` |
+| GitHub Pages config | `next.config.js` with `GITHUB_PAGES=true` | Enables `output: "export"` and `basePath: "/starter-logo"` |
+
+CI (`.github/workflows/deploy.yml`) runs `npm run build:github-pages` on push to `main`.
+
+### Pattern B (optional, not recommended for dev)
+
+You can also mark an explicit `export async function getStaticProps` with `// GithubOnly`. The GitHub build removes `getServerSideProps` and **keeps** your `getStaticProps` — it never creates a duplicate.
+
+Pattern B breaks `next dev` because both exports would exist in the same file. Use Pattern A unless you only need static props in CI.
+
+### Removing GitHub Pages support later
+
+Delete:
+
+- `// GithubOnly` blocks in `pages/`
+- `scripts/strip-github-only.js`, `scripts/restore-github-only.js`, `scripts/github-pages/`
+- `build:github-pages` script and the GitHub Pages workflow
 
 ---
 
