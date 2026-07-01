@@ -94,6 +94,8 @@ Scripts:
 
 Do **not** export `getStaticProps` in page files for daily dev. Full explanation: [README.md — GitHub Pages vs server-side rendering](README.md#github-pages-vs-server-side-rendering).
 
+**First-time deploy:** enable Pages in repo **Settings → Pages → Source: GitHub Actions** before deploy will work. See [README troubleshooting](README.md#github-pages-deploy-fails-with-404--ensure-github-pages-has-been-enabled).
+
 ### Docker notes for Cloud Agents
 
 - The VM uses **Ubuntu**; Docker is installed by `.cursor/install.sh` (`docker.io` + `docker-compose-v2`).
