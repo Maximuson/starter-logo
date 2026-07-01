@@ -594,19 +594,31 @@ prisma migrate deploy → strip GithubOnly → next build → restore GithubOnly
    - [vercel.com/new](https://vercel.com/new) → import `Maximuson/starter-logo`
    - Framework preset: **Next.js** (auto-detected)
 
-2. **Add a production database** (Vercel Postgres, Neon, Supabase, etc.) and set in Vercel project **Settings → Environment Variables**:
+2. **Add a production database** (Vercel Postgres, Neon, Supabase, etc.) and set **`DATABASE_URL` in two places**:
 
-   | Variable | Environment | Example |
-   |----------|-------------|---------|
-   | `DATABASE_URL` | Production | `postgresql://user:pass@host/db?sslmode=require` |
+   | Where | Why |
+   |-------|-----|
+   | **Vercel** → Project → Settings → Environment Variables → **Production** | Runtime SSR (`getServerSideProps` reads the DB on each request) |
+   | **GitHub** → repo → Settings → Secrets and variables → Actions → **Repository secrets** | Build step on GitHub Actions (`prisma migrate deploy` during `vercel build`) |
 
-3. **Add GitHub Actions secrets** (repo **Settings → Secrets and variables → Actions**):
+   Use the same hosted Postgres connection string in both places (not the Docker Compose `db` hostname).
+
+   Example value:
+
+   ```
+   postgresql://user:pass@host/db?sslmode=require
+   ```
+
+   > **Note:** GitHub **Environments** alone do not inject variables into this workflow. You must add `DATABASE_URL` as a **repository secret** (or add `environment: production` to the workflow job and use an environment secret with the same name).
+
+3. **Add other GitHub Actions secrets** (repo **Settings → Secrets and variables → Actions**):
 
    | Secret | Where to find it |
    |--------|------------------|
    | `VERCEL_TOKEN` | [Vercel account tokens](https://vercel.com/account/tokens) |
    | `VERCEL_ORG_ID` | Vercel project → Settings → General |
    | `VERCEL_PROJECT_ID` | Vercel project → Settings → General |
+   | `DATABASE_URL` | Vercel Postgres → Connect, or your hosted DB dashboard |
 
 4. **Seed production data** (once, after first deploy):
 
@@ -699,8 +711,10 @@ The Node 20 deprecation message in the log is only a warning — this workflow a
 ### Vercel deploy fails or shows no users
 
 - Check **Actions → Vercel Production** for build errors
-- Confirm `VERCEL_TOKEN`, `VERCEL_ORG_ID`, and `VERCEL_PROJECT_ID` are set in GitHub Secrets
-- Confirm `DATABASE_URL` is set in Vercel **Production** environment variables (remote Postgres — not the Docker Compose `db` hostname)
+- Confirm `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`, and **`DATABASE_URL`** are set in GitHub **repository secrets**
+- Confirm `DATABASE_URL` is also set in Vercel **Production** environment variables (needed at runtime)
+- If build fails with `DATABASE_URL resolved to an empty string`, the GitHub secret is missing or empty — GitHub Environments do not apply unless the workflow job declares `environment:`
+- If you see `Build not running on Vercel`, that is expected for `vercel deploy --prebuilt` — pass `DATABASE_URL` via GitHub secrets (fixed in the workflow)
 - Confirm Node.js **24.x** is used (`package.json` `engines.node` overrides old project settings)
 - If build fails with `Found invalid Node.js Version: "24.x"`, upgrade the workflow's Vercel CLI (use `vercel@50` or newer — CLI 41 only supports Node 22)
 - Run seed once against production: `DATABASE_URL="..." npm run db:seed`
