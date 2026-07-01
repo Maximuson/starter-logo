@@ -25,9 +25,10 @@ This README is written for **frontend developers** who are new to backend concep
 11. [Docker and Docker Compose](#docker-and-docker-compose)
 12. [Cursor Cloud Agents](#cursor-cloud-agents)
 13. [GitHub Pages vs server-side rendering](#github-pages-vs-server-side-rendering)
-14. [Using a remote database instead](#using-a-remote-database-instead)
-15. [Common tasks](#common-tasks)
-16. [Troubleshooting](#troubleshooting)
+14. [Vercel production deployment](#vercel-production-deployment)
+15. [Using a remote database instead](#using-a-remote-database-instead)
+16. [Common tasks](#common-tasks)
+17. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -154,6 +155,7 @@ starter-logo/
 ├── docker-compose.yml    # Defines app + db services
 ├── Dockerfile            # Builds the app container image
 ├── docker-entrypoint.sh  # migrate + seed + next dev on container start
+├── vercel.json           # Vercel production build settings
 ├── .env.example          # Default environment variables (committed)
 ├── .env                  # Your local overrides (gitignored)
 └── package.json          # npm scripts and dependencies
@@ -452,14 +454,15 @@ For data that must survive longer, use a **remote database** (Neon, Supabase, et
 
 ## GitHub Pages vs server-side rendering
 
-This app is deployed in two ways:
+This app is deployed in three ways:
 
-| Target | Command | Data loading | Database |
-|--------|---------|--------------|----------|
-| **Dev / Docker / production** | `npm run dev`, `npm run build` | `getServerSideProps` (SSR) | Yes — live Prisma queries |
+| Target | Command / trigger | Data loading | Database |
+|--------|-------------------|--------------|----------|
+| **Dev / Docker** | `npm run dev`, `npm run up` | `getServerSideProps` (SSR) | Yes — local Postgres |
+| **Vercel production** | push to `main` → `.github/workflows/vercel.yml` | `getServerSideProps` (SSR) | Yes — remote Postgres (`DATABASE_URL`) |
 | **GitHub Pages** | `npm run build:github-pages` | `getStaticProps` (static export) | No — static fallback message |
 
-GitHub Pages only serves static files. It cannot run a Node server or connect to Postgres. So we use **SSR by default** and switch to **static export only for GitHub Pages**.
+GitHub Pages only serves static files. Vercel runs a Node server, so it supports `getServerSideProps` and Prisma like local Docker.
 
 ### One page, one active loader
 
@@ -558,6 +561,69 @@ Delete:
 
 ---
 
+## Vercel production deployment
+
+**Vercel** is the production host for this app. It runs the normal SSR build (`getServerSideProps` + Prisma), not the GitHub Pages static export.
+
+### What runs on Vercel
+
+| File | Role |
+|------|------|
+| `vercel.json` | Production build command (migrate + SSR `next build`) |
+| `.github/workflows/vercel.yml` | Deploy to Vercel on push to `main` |
+| `prisma/schema.prisma` | `binaryTargets` includes `rhel-openssl-3.0.x` for Vercel's Linux runtime |
+
+Build flow on Vercel:
+
+```
+npm ci → prisma migrate deploy → strip GithubOnly → next build → deploy
+```
+
+### One-time setup
+
+1. **Create a Vercel project** linked to this GitHub repo:
+   - [vercel.com/new](https://vercel.com/new) → import `Maximuson/starter-logo`
+   - Framework preset: **Next.js** (auto-detected)
+
+2. **Add a production database** (Vercel Postgres, Neon, Supabase, etc.) and set in Vercel project **Settings → Environment Variables**:
+
+   | Variable | Environment | Example |
+   |----------|-------------|---------|
+   | `DATABASE_URL` | Production | `postgresql://user:pass@host/db?sslmode=require` |
+
+3. **Add GitHub Actions secrets** (repo **Settings → Secrets and variables → Actions**):
+
+   | Secret | Where to find it |
+   |--------|------------------|
+   | `VERCEL_TOKEN` | [Vercel account tokens](https://vercel.com/account/tokens) |
+   | `VERCEL_ORG_ID` | Vercel project → Settings → General |
+   | `VERCEL_PROJECT_ID` | Vercel project → Settings → General |
+
+4. **Seed production data** (once, after first deploy):
+
+   ```bash
+   DATABASE_URL="your-production-url" npm run db:seed
+   ```
+
+5. Push to `main` or re-run the **Vercel Production** workflow in the Actions tab.
+
+### Alternative: Vercel GitHub integration only
+
+You can skip the GitHub Actions workflow and use Vercel's built-in Git integration (auto-deploy on push). The workflow in `.github/workflows/vercel.yml` gives you deploy logs in GitHub Actions and uses `vercel deploy --prebuilt`.
+
+If you use **only** Vercel's integration, disable or delete `.github/workflows/vercel.yml` to avoid duplicate deploys.
+
+### Local production build (same as Vercel, without deploy)
+
+```bash
+npm run build
+npm run start
+```
+
+Requires a running database and `DATABASE_URL` in `.env`.
+
+---
+
 ## Using a remote database instead
 
 If you use Neon, Supabase, or another hosted Postgres:
@@ -618,6 +684,14 @@ On first enable, GitHub creates the `github-pages` environment. The site URL wil
 `https://maximuson.github.io/starter-logo/`
 
 The Node 20 deprecation message in the log is only a warning — this workflow already uses Node 24.
+
+### Vercel deploy fails or shows no users
+
+- Check **Actions → Vercel Production** for build errors
+- Confirm `VERCEL_TOKEN`, `VERCEL_ORG_ID`, and `VERCEL_PROJECT_ID` are set in GitHub Secrets
+- Confirm `DATABASE_URL` is set in Vercel **Production** environment variables
+- Run seed once against production: `DATABASE_URL="..." npm run db:seed`
+- Prisma on Vercel needs `binaryTargets = ["native", "rhel-openssl-3.0.x"]` in `prisma/schema.prisma` (already configured)
 
 ### `Can't reach database server`
 

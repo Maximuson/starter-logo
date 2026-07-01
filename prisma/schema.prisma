@@ -6,7 +6,8 @@
 
 // Tells Prisma to generate a JavaScript/TypeScript client in node_modules.
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
 // Database connection settings.

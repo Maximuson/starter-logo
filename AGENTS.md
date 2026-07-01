@@ -67,6 +67,7 @@ npm run down && npm run up
 - No automated tests exist in this repo.
 - **`npm run build`** — SSR production build (`getServerSideProps`, live DB). Strips `// GithubOnly` blocks before build and restores after.
 - **`npm run build:github-pages`** — static export for GitHub Pages (`getStaticProps`, no DB). Used by CI on push to `main`.
+- **Vercel production** — `.github/workflows/vercel.yml` on push to `main`. SSR build with `getServerSideProps` + remote `DATABASE_URL`. See [README — Vercel production deployment](README.md#vercel-production-deployment).
 
 ### GitHub Pages data loading (`// GithubOnly`)
 
@@ -117,6 +118,7 @@ sudo systemctl restart docker || sudo dockerd &
 | Demo/seed data | `prisma/seed.js` |
 | DB access in pages | `lib/prisma.js`, `getServerSideProps` in `pages/` |
 | GitHub Pages static export | `// GithubOnly` helper + `scripts/github-pages/prepare-build.js` |
+| Vercel production deploy | `vercel.json`, `.github/workflows/vercel.yml`, `DATABASE_URL` in Vercel |
 | Compose services / ports | `docker-compose.yml`, `.env.example` |
 | Cloud boot config | `.cursor/environment.json`, `.cursor/install.sh` |
 
