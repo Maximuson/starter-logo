@@ -605,6 +605,20 @@ Use server-side fetching when you can. It keeps database access off the client.
 
 ## Troubleshooting
 
+### GitHub Pages deploy fails with `404` / `Ensure GitHub Pages has been enabled`
+
+The **build** job succeeded but **deploy** failed. This is a repository setting, not a code bug.
+
+1. Open [github.com/Maximuson/starter-logo/settings/pages](https://github.com/Maximuson/starter-logo/settings/pages)
+2. Under **Build and deployment**, set **Source** to **GitHub Actions** (not "Deploy from a branch")
+3. Save, then re-run the failed workflow: **Actions** → **Deploy** → **Re-run all jobs**
+
+On first enable, GitHub creates the `github-pages` environment. The site URL will be:
+
+`https://maximuson.github.io/starter-logo/`
+
+The Node 20 deprecation message in the log is only a warning — this workflow already uses Node 24.
+
 ### `Can't reach database server`
 
 - Is Postgres running? `npm run up`
