@@ -84,7 +84,7 @@ function Home({ users = [], usersUnavailableReason = null }) {
 }
 
 // GithubOnly — removed on npm run build; used by getStaticProps on build:github-pages
-async function loadGithubPage() {
+async function getGithubStaticPageProps() {
   return {
     props: {
       users: [],
